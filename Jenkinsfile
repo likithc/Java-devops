@@ -95,6 +95,13 @@ pipeline {
         }
     }
 
+	stage('Code Quality (SonarQube)') {
+            steps {
+                echo 'Scanning code with SonarQube...'
+                sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=employee-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=YOUR_COPIED_TOKEN'
+            }
+        }
+
     post {
         always {
             echo "Deployment pipeline finished. Cleaning up temporary Docker artifacts."

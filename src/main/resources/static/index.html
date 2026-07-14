@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Employee Portal</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        input { padding: 10px; margin: 5px 0; width: calc(33% - 15px); border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background-color: #007bff; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Add New Employee</h2>
+        <form id="empForm">
+            <input type="text" id="name" placeholder="Full Name" required>
+            <input type="text" id="role" placeholder="Job Role" required>
+            <input type="email" id="email" placeholder="Email Address" required>
+            <button type="submit">Submit</button>
+        </form>
+
+        <h2>Employee Directory</h2>
+        <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Email</th></tr></thead>
+            <tbody id="empTable"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // Fetch data from your Spring Boot API
+        function loadEmployees() {
+            fetch('/api/employees')
+            .then(response => response.json())
+            .then(data => {
+                const table = document.getElementById('empTable');
+                table.innerHTML = '';
+                data.forEach(emp => {
+                    table.innerHTML += `<tr><td>${emp.id}</td><td>${emp.name}</td><td>${emp.role}</td><td>${emp.email}</td></tr>`;
+                });
+            });
+        }
+
+        // Send new data to your API
+        document.getElementById('empForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const emp = {
+                name: document.getElementById('name').value,
+                role: document.getElementById('role').value,
+                email: document.getElementById('email').value
+            };
+            fetch('/api/employees', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(emp)
+            }).then(() => {
+                document.getElementById('empForm').reset();
+                loadEmployees(); // Reload the table
+            });
+        });
+
+        // Load data when page opens
+        loadEmployees();
+    </script>
+</body>
+</html>
