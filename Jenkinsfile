@@ -1,55 +1,46 @@
 pipeline {
     agent any
 
-    environment {
-        // Core Variables
-        DOCKER_IMAGE = "employee-app"
-        IMAGE_TAG = "v${env.BUILD_ID}"
-        
-        // NGINX configuration path on the host server
-        NGINX_CONF_DIR = "/etc/nginx/conf.d"
-    }
-
     stages {
-        stage('Unit Tests & Maven Package') {
+        stage('Code Quality (SonarQube)') {
             steps {
-                echo "Running tests to prevent broken code from deploying..."
-                sh 'mvn clean test package'
+                echo 'Scanning code with SonarQube...'
+                // IMPORTANT: Replace YOUR_COPIED_TOKEN below with your actual SonarQube token!
+                sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=employee-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=YOUR_COPIED_TOKEN'
             }
         }
 
-        stage('Build & Tag Docker Image') {
+        stage('Build Java App') {
             steps {
-                echo "Building lightweight Docker image..."
-                sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} -t ${DOCKER_IMAGE}:latest ."
+                echo 'Compiling and building the JAR file...'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
-        stage('Determine Target Environment') {
+        stage('Determine Environment (Blue/Green)') {
             steps {
                 script {
-                    // Check if Blue is currently running and active
-                    def isBlueActive = sh(script: "docker ps | grep employee-app-blue", returnStatus: true) == 0
+                    // Check which port NGINX is currently pointing to
+                    def currentPort = sh(script: "grep -o '127.0.0.1:[0-9]*' /etc/nginx/conf.d/employee-app.conf | cut -d ':' -f 2 || echo 'none'", returnStdout: true).trim()
                     
-                    if (isBlueActive) {
-                        env.ACTIVE_ENV = "blue"
-                        env.NEW_ENV = "green"
-                        env.NEW_PORT = "8082"
+                    if (currentPort == '8081') {
+                        env.NEW_ENV = 'green'
+                        env.NEW_PORT = '8082'
+                        env.OLD_ENV = 'blue'
                     } else {
-                        // If Blue isn't active, we assume Green is (or it's the first run)
-                        env.ACTIVE_ENV = "green"
-                        env.NEW_ENV = "blue"
-                        env.NEW_PORT = "8081"
+                        env.NEW_ENV = 'blue'
+                        env.NEW_PORT = '8081'
+                        env.OLD_ENV = 'green'
                     }
-                    echo "Currently Active: ${env.ACTIVE_ENV}. Deploying to: ${env.NEW_ENV} on port ${env.NEW_PORT}"
+                    echo "Currently active on ${currentPort}. Deploying to ${env.NEW_ENV} on port ${env.NEW_PORT}."
                 }
             }
         }
 
-        stage('Spin Up New Environment') {
+        stage('Deploy New Environment') {
             steps {
-                // We use Docker Compose to target just the idle service
-                sh "docker-compose up -d --build employee-app-${env.NEW_ENV}"
+                echo "Starting MySQL and the new ${env.NEW_ENV} environment..."
+                sh "docker-compose up --build -d mysql-db employee-app-${env.NEW_ENV}"
             }
         }
 
@@ -57,10 +48,8 @@ pipeline {
             steps {
                 echo "Waiting for the ${env.NEW_ENV} environment to report healthy..."
                 script {
-                    // Retry every 5 seconds for up to 1 minute
-                    retry(12) {
+                    retry(12) { 
                         sleep 5
-                        // Ensure the Spring Boot actuator endpoint returns a 200 OK
                         sh "curl --silent --fail http://localhost:${env.NEW_PORT}/actuator/health"
                     }
                 }
@@ -70,42 +59,27 @@ pipeline {
         stage('Traffic Cutover (NGINX)') {
             steps {
                 echo "Health check passed! Switching NGINX traffic to ${env.NEW_ENV}..."
-                // Update the NGINX upstream port securely using sed
-                sh "sudo sed -i 's/server 127.0.0.1:.*/server 127.0.0.1:${env.NEW_PORT};/' ${NGINX_CONF_DIR}/employee-app.conf"
-                
-                // Reload NGINX gracefully without dropping active connections
-                sh "sudo systemctl reload nginx"
+                sh "sudo sed -i 's/server 127.0.0.1:.*/server 127.0.0.1:${env.NEW_PORT};/' /etc/nginx/conf.d/employee-app.conf"
+                sh "sudo systemctl restart nginx"
             }
         }
 
         stage('Teardown Old Environment') {
             steps {
-                script {
-                    // Only tear down the old container if it actually exists (skip on first run)
-                    def oldExists = sh(script: "docker ps -a | grep employee-app-${env.ACTIVE_ENV}", returnStatus: true) == 0
-                    if (oldExists) {
-                        echo "Traffic cutover complete. Shutting down the old ${env.ACTIVE_ENV} environment..."
-                        sh "docker-compose stop employee-app-${env.ACTIVE_ENV}"
-                        sh "docker-compose rm -f employee-app-${env.ACTIVE_ENV}"
-                    } else {
-                        echo "No previous environment to clean up. (First deployment)"
-                    }
-                }
+                echo "Traffic is live on ${env.NEW_ENV}. Shutting down ${env.OLD_ENV}..."
+                sh "docker stop employee-app-${env.OLD_ENV} || true"
+                sh "docker rm employee-app-${env.OLD_ENV} || true"
             }
         }
     }
 
-	stage('Code Quality (SonarQube)') {
-            steps {
-                echo 'Scanning code with SonarQube...'
-                sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=employee-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=YOUR_COPIED_TOKEN'
-            }
-        }
-
     post {
         always {
             echo "Deployment pipeline finished. Cleaning up temporary Docker artifacts."
-            sh 'docker system prune -f'
+            sh "docker system prune -f"
+        }
+        success {
+            echo "PIPELINE SUCCESS! Users are now on the ${env.NEW_ENV} environment."
         }
         failure {
             echo "PIPELINE FAILED! The live environment was NOT swapped and users are unaffected."
