@@ -26,6 +26,7 @@ services:
   # 2. THE "BLUE" ENVIRONMENT (Port 8081)
   # ==========================================
   employee-app-blue:
+    build: .
     image: employee-app:latest
     container_name: employee-app-blue
     ports:
@@ -45,6 +46,7 @@ services:
   # 3. THE "GREEN" ENVIRONMENT (Port 8082)
   # ==========================================
   employee-app-green:
+    build: .
     image: employee-app:latest
     container_name: employee-app-green
     ports:
