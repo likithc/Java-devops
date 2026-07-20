@@ -3,21 +3,21 @@ pipeline {
 
     tools {
         maven 'maven-3' 
-        jdk 'jdk-17'    
+        // We removed the jdk 'jdk-17' tool from here since we are hardcoding it below
     }
 
     stages {
         stage('Code Quality (SonarQube)') {
             steps {
                 script {
-                    // Grab the paths for BOTH Jenkins-managed tools
-                    def javaHome = tool name: 'jdk-17', type: 'jdk'
-                    def mvnHome  = tool name: 'maven-3', type: 'maven'
+                    def mvnHome = tool name: 'maven-3', type: 'maven'
                     
-                    // Force the pipeline to use the Jenkins binaries, completely bypassing Ubuntu
+                    // Hardcode the native Ubuntu JDK 17 path
+                    def javaHome = '/usr/lib/jvm/java-17-openjdk-amd64'
+                    
                     withEnv(["JAVA_HOME=${javaHome}", "PATH=${mvnHome}/bin:${javaHome}/bin:${env.PATH}"]) {
                         echo 'Scanning code with SonarQube...'
-                        sh 'mvn --version' // This should now print the Jenkins tools!
+                        sh 'mvn --version' 
                         
                         // IMPORTANT: Replace YOUR_COPIED_TOKEN below with your actual SonarQube token!
                         sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=employee-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=YOUR_COPIED_TOKEN'
@@ -29,8 +29,10 @@ pipeline {
         stage('Build Java App') {
             steps {
                 script {
-                    def javaHome = tool name: 'jdk-17', type: 'jdk'
-                    def mvnHome  = tool name: 'maven-3', type: 'maven'
+                    def mvnHome = tool name: 'maven-3', type: 'maven'
+                    
+                    // Hardcode the native Ubuntu JDK 17 path here too
+                    def javaHome = '/usr/lib/jvm/java-17-openjdk-amd64'
                     
                     withEnv(["JAVA_HOME=${javaHome}", "PATH=${mvnHome}/bin:${javaHome}/bin:${env.PATH}"]) {
                         echo 'Compiling and building the JAR file...'
