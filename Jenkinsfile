@@ -20,7 +20,7 @@ pipeline {
                         sh 'mvn --version' 
                         
                         // IMPORTANT: Replace YOUR_COPIED_TOKEN below with your actual SonarQube token!
-                        sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=employee-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=YOUR_COPIED_TOKEN'
+                        sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=employee-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=sqa_064ce5c54f2ce471d36308762e4015b7b5484801'
                     }
                 }
             }
