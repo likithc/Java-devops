@@ -31,7 +31,6 @@ services:
     ports:
       - "8081:8080"
     environment:
-      # Spring Boot uses these variables to connect to the database
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/employee_db?useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=dbuser
       - SPRING_DATASOURCE_PASSWORD=dbpassword
@@ -61,6 +60,20 @@ services:
     networks:
       - employee-network
 
+  # ==========================================
+  # 4. SONARQUBE
+  # ==========================================
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_SEARCH_JAVAADDITIONALOPTS=-Xms256m -Xmx256m
+      - SONAR_WEB_JAVAADDITIONALOPTS=-Xms512m -Xmx512m
+    networks:
+      - employee-network
+
 # ==========================================
 # INFRASTRUCTURE SETUP
 # ==========================================
@@ -70,11 +83,3 @@ networks:
 
 volumes:
   mysql_data:
-
-
-
-sonarqube:
-    image: sonarqube:community  # (Or whatever image version your project specifies)
-    environment:
-      - SONAR_SEARCH_JAVAADDITIONALOPTS=-Xms256m -Xmx256m
-      - SONAR_WEB_JAVAADDITIONALOPTS=-Xms512m -Xmx512m
