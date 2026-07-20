@@ -1,19 +1,38 @@
 pipeline {
     agent any
 
+    // 1. Tell Jenkins to use the global tools we configured
+    tools {
+        maven 'maven-3' 
+        jdk 'jdk-17'    
+    }
+
     stages {
         stage('Code Quality (SonarQube)') {
             steps {
-                echo 'Scanning code with SonarQube...'
-                // IMPORTANT: Replace YOUR_COPIED_TOKEN below with your actual SonarQube token!
-                sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=employee-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=YOUR_COPIED_TOKEN'
+                script {
+                    // 2. Dynamically grab the path to JDK 17 and force Maven to use it
+                    def javaHome = tool name: 'jdk-17', type: 'jdk'
+                    withEnv(["JAVA_HOME=${javaHome}", "PATH=${javaHome}/bin:${env.PATH}"]) {
+                        echo 'Scanning code with SonarQube...'
+                        sh 'mvn --version' // Added for diagnostic logging
+                        // IMPORTANT: Replace YOUR_COPIED_TOKEN below with your actual SonarQube token!
+                        sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=employee-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=YOUR_COPIED_TOKEN'
+                    }
+                }
             }
         }
 
         stage('Build Java App') {
             steps {
-                echo 'Compiling and building the JAR file...'
-                sh 'mvn clean package -DskipTests'
+                script {
+                    // 3. Apply the same JDK override for the build stage
+                    def javaHome = tool name: 'jdk-17', type: 'jdk'
+                    withEnv(["JAVA_HOME=${javaHome}", "PATH=${javaHome}/bin:${env.PATH}"]) {
+                        echo 'Compiling and building the JAR file...'
+                        sh 'mvn clean package -DskipTests'
+                    }
+                }
             }
         }
 
