@@ -1,7 +1,6 @@
 pipeline {
     agent any
 
-    // 1. Tell Jenkins to use the global tools we configured
     tools {
         maven 'maven-3' 
         jdk 'jdk-17'    
@@ -11,11 +10,15 @@ pipeline {
         stage('Code Quality (SonarQube)') {
             steps {
                 script {
-                    // 2. Dynamically grab the path to JDK 17 and force Maven to use it
+                    // Grab the paths for BOTH Jenkins-managed tools
                     def javaHome = tool name: 'jdk-17', type: 'jdk'
-                    withEnv(["JAVA_HOME=${javaHome}", "PATH=${javaHome}/bin:${env.PATH}"]) {
+                    def mvnHome  = tool name: 'maven-3', type: 'maven'
+                    
+                    // Force the pipeline to use the Jenkins binaries, completely bypassing Ubuntu
+                    withEnv(["JAVA_HOME=${javaHome}", "PATH=${mvnHome}/bin:${javaHome}/bin:${env.PATH}"]) {
                         echo 'Scanning code with SonarQube...'
-                        sh 'mvn --version' // Added for diagnostic logging
+                        sh 'mvn --version' // This should now print the Jenkins tools!
+                        
                         // IMPORTANT: Replace YOUR_COPIED_TOKEN below with your actual SonarQube token!
                         sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=employee-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=YOUR_COPIED_TOKEN'
                     }
@@ -26,9 +29,10 @@ pipeline {
         stage('Build Java App') {
             steps {
                 script {
-                    // 3. Apply the same JDK override for the build stage
                     def javaHome = tool name: 'jdk-17', type: 'jdk'
-                    withEnv(["JAVA_HOME=${javaHome}", "PATH=${javaHome}/bin:${env.PATH}"]) {
+                    def mvnHome  = tool name: 'maven-3', type: 'maven'
+                    
+                    withEnv(["JAVA_HOME=${javaHome}", "PATH=${mvnHome}/bin:${javaHome}/bin:${env.PATH}"]) {
                         echo 'Compiling and building the JAR file...'
                         sh 'mvn clean package -DskipTests'
                     }
@@ -39,7 +43,6 @@ pipeline {
         stage('Determine Environment (Blue/Green)') {
             steps {
                 script {
-                    // Check which port NGINX is currently pointing to
                     def currentPort = sh(script: "grep -o '127.0.0.1:[0-9]*' /etc/nginx/conf.d/employee-app.conf | cut -d ':' -f 2 || echo 'none'", returnStdout: true).trim()
                     
                     if (currentPort == '8081') {
