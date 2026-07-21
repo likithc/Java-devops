@@ -7,6 +7,15 @@ pipeline {
     }
 
     stages {
+        stage('Start Core Infrastructure') {
+            steps {
+                echo 'Ensuring Database, SonarQube, and Observability stack are running...'
+                // This starts the supporting services in the background. 
+                // If they are already running, Docker Compose safely leaves them alone.
+                sh 'docker-compose up -d mysql-db sonarqube prometheus grafana'
+            }
+        }
+
         stage('Code Quality (SonarQube)') {
             steps {
                 script {
@@ -63,8 +72,9 @@ pipeline {
 
         stage('Deploy New Environment') {
             steps {
-                echo "Starting MySQL and the new ${env.NEW_ENV} environment..."
-                sh "docker-compose up --build -d mysql-db employee-app-${env.NEW_ENV}"
+                echo "Starting the new ${env.NEW_ENV} environment..."
+                // Removed mysql-db from this command since it is now handled in the Core Infrastructure stage
+                sh "docker-compose up --build -d employee-app-${env.NEW_ENV}"
             }
         }
 
@@ -74,6 +84,7 @@ pipeline {
                 script {
                     retry(12) { 
                         sleep 5
+                        // This relies on the Actuator endpoint we configured earlier
                         sh "curl --silent --fail http://localhost:${env.NEW_PORT}/actuator/health"
                     }
                 }
