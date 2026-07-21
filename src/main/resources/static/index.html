@@ -1,69 +1,239 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Employee Portal</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Portal - v2.0</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        input { padding: 10px; margin: 5px 0; width: calc(33% - 15px); border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
-        th { background-color: #007bff; color: white; }
+        :root {
+            --primary-color: #2ecc71;
+            --primary-hover: #27ae60;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --border-color: #e0e0e0;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            background: var(--bg-color); 
+            color: var(--text-color);
+        }
+
+        .navbar {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .navbar h1 { margin: 0; font-size: 1.5rem; }
+
+        .container { 
+            max-width: 900px; 
+            margin: auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
+        }
+
+        h2 { border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 0; }
+
+        .form-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        input { 
+            flex: 1;
+            min-width: 200px;
+            padding: 12px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button { 
+            padding: 12px 25px; 
+            background: var(--primary-color); 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer; 
+            transition: background 0.3s, transform 0.1s;
+        }
+
+        button:hover { background: var(--primary-hover); }
+        button:active { transform: scale(0.98); }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px; 
+            background: white;
+        }
+
+        th, td { 
+            padding: 15px; 
+            border-bottom: 1px solid var(--border-color); 
+            text-align: left; 
+        }
+
+        th { 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            font-weight: 600;
+        }
+
+        tr:hover { background-color: #f1f3f5; }
+
+        .status-message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { text-align: center; padding: 20px; color: #666; font-style: italic; }
+
     </style>
 </head>
 <body>
+    <div class="navbar">
+        <h1>Employee Management Portal</h1>
+    </div>
+
     <div class="container">
         <h2>Add New Employee</h2>
+        
+        <div id="statusMessage" class="status-message"></div>
+
         <form id="empForm">
-            <input type="text" id="name" placeholder="Full Name" required>
-            <input type="text" id="role" placeholder="Job Role" required>
-            <input type="email" id="email" placeholder="Email Address" required>
-            <button type="submit">Submit</button>
+            <div class="form-group">
+                <input type="text" id="name" placeholder="Full Name" required autocomplete="name">
+                <input type="text" id="role" placeholder="Job Role" required>
+                <input type="email" id="email" placeholder="Email Address" required autocomplete="email">
+                <button type="submit" id="submitBtn">Add Employee</button>
+            </div>
         </form>
 
         <h2>Employee Directory</h2>
-        <table>
-            <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Email</th></tr></thead>
+        <div id="loadingIndicator" class="loading">Loading employee data...</div>
+        
+        <table id="employeeTableContainer" style="display: none;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
             <tbody id="empTable"></tbody>
         </table>
     </div>
 
     <script>
+        const API_URL = '/api/employees';
+        const empTable = document.getElementById('empTable');
+        const empForm = document.getElementById('empForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const tableContainer = document.getElementById('employeeTableContainer');
+
+        // Display success or error messages
+        function showMessage(msg, isError = false) {
+            statusMessage.textContent = msg;
+            statusMessage.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
+            statusMessage.style.display = 'block';
+            setTimeout(() => { statusMessage.style.display = 'none'; }, 5000);
+        }
+
         // Fetch data from your Spring Boot API
-        function loadEmployees() {
-            fetch('/api/employees')
-            .then(response => response.json())
-            .then(data => {
-                const table = document.getElementById('empTable');
-                table.innerHTML = '';
-                data.forEach(emp => {
-                    table.innerHTML += `<tr><td>${emp.id}</td><td>${emp.name}</td><td>${emp.role}</td><td>${emp.email}</td></tr>`;
-                });
-            });
+        async function loadEmployees() {
+            loadingIndicator.style.display = 'block';
+            tableContainer.style.display = 'none';
+            
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Failed to fetch data');
+                
+                const data = await response.json();
+                empTable.innerHTML = '';
+                
+                if (data.length === 0) {
+                    empTable.innerHTML = '<tr><td colspan="4" style="text-align: center;">No employees found.</td></tr>';
+                } else {
+                    data.forEach(emp => {
+                        empTable.innerHTML += `
+                            <tr>
+                                <td>#${emp.id}</td>
+                                <td><strong>${emp.name}</strong></td>
+                                <td>${emp.role}</td>
+                                <td><a href="mailto:${emp.email}" style="color: #2ecc71; text-decoration: none;">${emp.email}</a></td>
+                            </tr>`;
+                    });
+                }
+                
+                loadingIndicator.style.display = 'none';
+                tableContainer.style.display = 'table';
+            } catch (error) {
+                loadingIndicator.style.display = 'none';
+                showMessage('Error loading employees: ' + error.message, true);
+            }
         }
 
         // Send new data to your API
-        document.getElementById('empForm').addEventListener('submit', function(e) {
+        empForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Adding...';
+
             const emp = {
-                name: document.getElementById('name').value,
-                role: document.getElementById('role').value,
-                email: document.getElementById('email').value
+                name: document.getElementById('name').value.trim(),
+                role: document.getElementById('role').value.trim(),
+                email: document.getElementById('email').value.trim()
             };
-            fetch('/api/employees', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(emp)
-            }).then(() => {
-                document.getElementById('empForm').reset();
-                loadEmployees(); // Reload the table
-            });
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(emp)
+                });
+
+                if (!response.ok) throw new Error('Failed to save employee');
+
+                empForm.reset();
+                showMessage('Employee added successfully!');
+                await loadEmployees(); 
+            } catch (error) {
+                showMessage('Error adding employee: ' + error.message, true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Add Employee';
+            }
         });
 
         // Load data when page opens
-        loadEmployees();
+        document.addEventListener('DOMContentLoaded', loadEmployees);
     </script>
 </body>
 </html>
