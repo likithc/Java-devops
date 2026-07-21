@@ -65,4 +65,16 @@
             </plugin>
         </plugins>
     </build>
+
+         <!-- Exposes operational information about the running application -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+
+<!-- Formats the actuator metrics into a format Prometheus can read -->
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-registry-prometheus</artifactId>
+</dependency>
 </project>
