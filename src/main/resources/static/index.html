@@ -3,237 +3,290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Portal - v2.0</title>
+    <title>Employee Portal Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #2ecc71;
-            --primary-hover: #27ae60;
-            --bg-color: #f8f9fa;
-            --text-color: #333;
-            --border-color: #e0e0e0;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f3f4f6;
+            --sidebar-bg: #1e293b;
+            --sidebar-hover: #334155;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --white: #ffffff;
+            --success: #10b981;
+            --danger: #ef4444;
         }
 
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            margin: 0; 
-            background: var(--bg-color); 
-            color: var(--text-color);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
         }
 
-        .navbar {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 15px 20px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-
-        .navbar h1 { margin: 0; font-size: 1.5rem; }
-
-        .container { 
-            max-width: 900px; 
-            margin: auto; 
-            background: white; 
-            padding: 30px; 
-            border-radius: 10px; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
-        }
-
-        h2 { border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 0; }
-
-        .form-group {
+        body {
             display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
         }
 
-        input { 
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-bg);
+            color: var(--white);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            border-bottom: 1px solid var(--sidebar-hover);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding-top: 20px;
+        }
+
+        .sidebar-menu li {
+            padding: 16px 24px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-menu li:hover, .sidebar-menu li.active {
+            background-color: var(--sidebar-hover);
+            border-left: 4px solid var(--primary);
+        }
+
+        /* Main Content Styles */
+        .main-content {
             flex: 1;
-            min-width: 200px;
-            padding: 12px; 
-            border: 1px solid var(--border-color); 
-            border-radius: 6px; 
-            font-size: 1rem;
-            transition: border-color 0.3s;
+            padding: 32px;
+            overflow-y: auto;
         }
 
-        input:focus {
-            outline: none;
-            border-color: var(--primary-color);
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
         }
 
-        button { 
-            padding: 12px 25px; 
-            background: var(--primary-color); 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer; 
-            transition: background 0.3s, transform 0.1s;
+        .header h1 {
+            font-size: 2rem;
+            color: var(--text-main);
         }
 
-        button:hover { background: var(--primary-hover); }
-        button:active { transform: scale(0.98); }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 10px; 
-            background: white;
+        .btn {
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.2s;
         }
 
-        th, td { 
-            padding: 15px; 
-            border-bottom: 1px solid var(--border-color); 
-            text-align: left; 
+        .btn:hover {
+            background-color: var(--primary-hover);
         }
 
-        th { 
-            background-color: var(--bg-color); 
-            color: var(--text-color); 
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: var(--white);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .card .value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        /* Table Styles */
+        .table-container {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-muted);
+            background-color: #f9fafb;
+        }
+
+        tr:hover {
+            background-color: #f9fafb;
+        }
+
+        .status {
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.8rem;
             font-weight: 600;
         }
 
-        tr:hover { background-color: #f1f3f5; }
-
-        .status-message {
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-            display: none;
+        .status.active {
+            background-color: #d1fae5;
+            color: var(--success);
         }
 
-        .status-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .status-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .loading { text-align: center; padding: 20px; color: #666; font-style: italic; }
+        .status.inactive {
+            background-color: #fee2e2;
+            color: var(--danger);
+        }
 
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            margin-right: 12px;
+            font-weight: 600;
+        }
+
+        .action-btn.delete {
+            color: var(--danger);
+        }
     </style>
 </head>
 <body>
-    <div class="navbar">
-        <h1>Employee Management Portal</h1>
-    </div>
 
-    <div class="container">
-        <h2>Add New Employee</h2>
-        
-        <div id="statusMessage" class="status-message"></div>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            Portal v2.0
+        </div>
+        <ul class="sidebar-menu">
+            <li class="active">📊 Dashboard</li>
+            <li>👥 Directory</li>
+            <li>⚙️ Settings</li>
+            <li style="margin-top: auto; border-left: none;">🚪 Logout</li>
+        </ul>
+    </nav>
 
-        <form id="empForm">
-            <div class="form-group">
-                <input type="text" id="name" placeholder="Full Name" required autocomplete="name">
-                <input type="text" id="role" placeholder="Job Role" required>
-                <input type="email" id="email" placeholder="Email Address" required autocomplete="email">
-                <button type="submit" id="submitBtn">Add Employee</button>
+    <!-- Main Workspace -->
+    <main class="main-content">
+        <div class="header">
+            <h1>Employee Directory</h1>
+            <button class="btn" onclick="alert('Trigger Add Employee Modal')">+ Add Employee</button>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="stats-grid">
+            <div class="card">
+                <h3>Total Employees</h3>
+                <div class="value">142</div>
             </div>
-        </form>
+            <div class="card">
+                <h3>Active</h3>
+                <div class="value" style="color: var(--success);">138</div>
+            </div>
+            <div class="card">
+                <h3>On Leave</h3>
+                <div class="value">4</div>
+            </div>
+        </div>
 
-        <h2>Employee Directory</h2>
-        <div id="loadingIndicator" class="loading">Loading employee data...</div>
-        
-        <table id="employeeTableContainer" style="display: none;">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Email</th>
-                </tr>
-            </thead>
-            <tbody id="empTable"></tbody>
-        </table>
-    </div>
+        <!-- Data Table -->
+        <div class="table-container">
+            <h3>Recent Onboarding</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Example Data Row 1 -->
+                    <tr>
+                        <td>#EMP-001</td>
+                        <td>Jane Doe</td>
+                        <td>Senior Developer</td>
+                        <td>Engineering</td>
+                        <td><span class="status active">Active</span></td>
+                        <td>
+                            <button class="action-btn">Edit</button>
+                            <button class="action-btn delete">Delete</button>
+                        </td>
+                    </tr>
+                    <!-- Example Data Row 2 -->
+                    <tr>
+                        <td>#EMP-002</td>
+                        <td>John Smith</td>
+                        <td>Product Manager</td>
+                        <td>Product</td>
+                        <td><span class="status active">Active</span></td>
+                        <td>
+                            <button class="action-btn">Edit</button>
+                            <button class="action-btn delete">Delete</button>
+                        </td>
+                    </tr>
+                    <!-- Example Data Row 3 -->
+                    <tr>
+                        <td>#EMP-003</td>
+                        <td>Alice Johnson</td>
+                        <td>UX Designer</td>
+                        <td>Design</td>
+                        <td><span class="status inactive">On Leave</span></td>
+                        <td>
+                            <button class="action-btn">Edit</button>
+                            <button class="action-btn delete">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
 
-    <script>
-        const API_URL = '/api/employees';
-        const empTable = document.getElementById('empTable');
-        const empForm = document.getElementById('empForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const statusMessage = document.getElementById('statusMessage');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const tableContainer = document.getElementById('employeeTableContainer');
-
-        // Display success or error messages
-        function showMessage(msg, isError = false) {
-            statusMessage.textContent = msg;
-            statusMessage.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
-            statusMessage.style.display = 'block';
-            setTimeout(() => { statusMessage.style.display = 'none'; }, 5000);
-        }
-
-        // Fetch data from your Spring Boot API
-        async function loadEmployees() {
-            loadingIndicator.style.display = 'block';
-            tableContainer.style.display = 'none';
-            
-            try {
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error('Failed to fetch data');
-                
-                const data = await response.json();
-                empTable.innerHTML = '';
-                
-                if (data.length === 0) {
-                    empTable.innerHTML = '<tr><td colspan="4" style="text-align: center;">No employees found.</td></tr>';
-                } else {
-                    data.forEach(emp => {
-                        empTable.innerHTML += `
-                            <tr>
-                                <td>#${emp.id}</td>
-                                <td><strong>${emp.name}</strong></td>
-                                <td>${emp.role}</td>
-                                <td><a href="mailto:${emp.email}" style="color: #2ecc71; text-decoration: none;">${emp.email}</a></td>
-                            </tr>`;
-                    });
-                }
-                
-                loadingIndicator.style.display = 'none';
-                tableContainer.style.display = 'table';
-            } catch (error) {
-                loadingIndicator.style.display = 'none';
-                showMessage('Error loading employees: ' + error.message, true);
-            }
-        }
-
-        // Send new data to your API
-        empForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Adding...';
-
-            const emp = {
-                name: document.getElementById('name').value.trim(),
-                role: document.getElementById('role').value.trim(),
-                email: document.getElementById('email').value.trim()
-            };
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(emp)
-                });
-
-                if (!response.ok) throw new Error('Failed to save employee');
-
-                empForm.reset();
-                showMessage('Employee added successfully!');
-                await loadEmployees(); 
-            } catch (error) {
-                showMessage('Error adding employee: ' + error.message, true);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Add Employee';
-            }
-        });
-
-        // Load data when page opens
-        document.addEventListener('DOMContentLoaded', loadEmployees);
-    </script>
 </body>
 </html>
