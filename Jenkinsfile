@@ -3,12 +3,11 @@ pipeline {
         label 'local-k8s-agent' 
     }
 
-    stages {
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main', url: 'https://github.com/your-username/your-repo.git'
-            }
-        }
+   stage('Checkout SCM') {
+    steps {
+        checkout scm
+    }
+}
         
         stage('Build Maven App') {
             steps {
