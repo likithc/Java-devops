@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: employee-app
+spec:
+  replicas: 2 # Kubernetes handles load balancing across these automatically
+  selector:
+    matchLabels:
+      app: employee-app
+  template:
+    metadata:
+      labels:
+        app: employee-app
+    spec:
+      containers:
+      - name: employee-app
+        image: employee-app:latest
+        imagePullPolicy: Never # Tells WSL Minikube/K8s to use the locally built image
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://mysql-db:3306/employee_db?useSSL=false&allowPublicKeyRetrieval=true"
+        - name: SPRING_DATASOURCE_USERNAME
+          value: "dbuser"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "dbpassword"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: "update"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: employee-app-service
+spec:
+  type: NodePort
+  selector:
+    app: employee-app
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080 # Accessible externally on your local node port

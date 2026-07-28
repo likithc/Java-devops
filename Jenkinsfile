@@ -1,123 +1,34 @@
 pipeline {
-    agent any
-
-    tools {
-        maven 'maven-3' 
-        // We removed the jdk 'jdk-17' tool from here since we are hardcoding it below
+    agent { 
+        label 'local-k8s-agent' 
     }
 
     stages {
-        stage('Start Core Infrastructure') {
+        stage('Checkout Code') {
             steps {
-                echo 'Ensuring Database, SonarQube, and Observability stack are running...'
-                // This starts the supporting services in the background. 
-                // If they are already running, Docker Compose safely leaves them alone.
-                sh 'docker-compose up -d mysql-db sonarqube prometheus grafana'
+                git branch: 'main', url: 'https://github.com/your-username/your-repo.git'
             }
         }
-
-        stage('Code Quality (SonarQube)') {
+        
+        stage('Build Maven App') {
             steps {
-                script {
-                    def mvnHome = tool name: 'maven-3', type: 'maven'
-                    
-                    // Hardcode the native Ubuntu JDK 17 path
-                    def javaHome = '/usr/lib/jvm/java-17-openjdk-amd64'
-                    
-                    withEnv(["JAVA_HOME=${javaHome}", "PATH=${mvnHome}/bin:${javaHome}/bin:${env.PATH}"]) {
-                        echo 'Scanning code with SonarQube...'
-                        sh 'mvn --version' 
-                        
-                        // IMPORTANT: Replace YOUR_COPIED_TOKEN below with your actual SonarQube token!
-                        sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=employee-app -Dsonar.host.url=http://localhost:9000 -Dsonar.login=sqa_137aea5132b65b33bc699baf7fd899d1fae38e6b'
-                    }
-                }
+                // Compiles your Java application (creates the jar inside target/)
+                sh 'mvn clean package -DskipTests'
             }
         }
-
-        stage('Build Java App') {
+        
+        stage('Build Docker Image') {
             steps {
-                script {
-                    def mvnHome = tool name: 'maven-3', type: 'maven'
-                    
-                    // Hardcode the native Ubuntu JDK 17 path here too
-                    def javaHome = '/usr/lib/jvm/java-17-openjdk-amd64'
-                    
-                    withEnv(["JAVA_HOME=${javaHome}", "PATH=${mvnHome}/bin:${javaHome}/bin:${env.PATH}"]) {
-                        echo 'Compiling and building the JAR file...'
-                        sh 'mvn clean package -DskipTests'
-                    }
-                }
+                // Builds the Spring Boot image using your root Dockerfile
+                sh 'docker build -t employee-app:latest .'
             }
         }
-
-        stage('Determine Environment (Blue/Green)') {
+        
+        stage('Deploy to Kubernetes') {
             steps {
-                script {
-                    def currentPort = sh(script: "grep -o '127.0.0.1:[0-9]*' /etc/nginx/conf.d/employee-app.conf | cut -d ':' -f 2 || echo 'none'", returnStdout: true).trim()
-                    
-                    if (currentPort == '8081') {
-                        env.NEW_ENV = 'green'
-                        env.NEW_PORT = '8082'
-                        env.OLD_ENV = 'blue'
-                    } else {
-                        env.NEW_ENV = 'blue'
-                        env.NEW_PORT = '8081'
-                        env.OLD_ENV = 'green'
-                    }
-                    echo "Currently active on ${currentPort}. Deploying to ${env.NEW_ENV} on port ${env.NEW_PORT}."
-                }
+                // Applies all configurations in your k8s folder to your local cluster
+                sh 'kubectl apply -f k8s/'
             }
-        }
-
-        stage('Deploy New Environment') {
-            steps {
-                echo "Starting the new ${env.NEW_ENV} environment..."
-                // Removed mysql-db from this command since it is now handled in the Core Infrastructure stage
-                sh "docker-compose up --build -d employee-app-${env.NEW_ENV}"
-            }
-        }
-
-        stage('Wait for Health Check') {
-            steps {
-                echo "Waiting for the ${env.NEW_ENV} environment to report healthy..."
-                script {
-                    retry(12) { 
-                        sleep 5
-                        // This relies on the Actuator endpoint we configured earlier
-                        sh "curl --silent --fail http://localhost:${env.NEW_PORT}/actuator/health"
-                    }
-                }
-            }
-        }
-
-        stage('Traffic Cutover (NGINX)') {
-            steps {
-                echo "Health check passed! Switching NGINX traffic to ${env.NEW_ENV}..."
-                sh "sudo sed -i 's/server 127.0.0.1:.*/server 127.0.0.1:${env.NEW_PORT};/' /etc/nginx/conf.d/employee-app.conf"
-                sh "sudo systemctl restart nginx"
-            }
-        }
-
-        stage('Teardown Old Environment') {
-            steps {
-                echo "Traffic is live on ${env.NEW_ENV}. Shutting down ${env.OLD_ENV}..."
-                sh "docker stop employee-app-${env.OLD_ENV} || true"
-                sh "docker rm employee-app-${env.OLD_ENV} || true"
-            }
-        }
-    }
-
-    post {
-        always {
-            echo "Deployment pipeline finished. Cleaning up temporary Docker artifacts."
-            sh "docker system prune -f"
-        }
-        success {
-            echo "PIPELINE SUCCESS! Users are now on the ${env.NEW_ENV} environment."
-        }
-        failure {
-            echo "PIPELINE FAILED! The live environment was NOT swapped and users are unaffected."
         }
     }
 }
